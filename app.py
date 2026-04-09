@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import joblib
 import time
+import base64
 
 # ==========================================
 # 🌟 全域三引擎快取 
@@ -161,17 +162,43 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 🌟 頁首與品牌 LOGO 區
+# 🌟 頁首與品牌 LOGO 區 (懸浮左上角)
 # ==========================================
-# 🌟 修改 2：利用欄位排版，讓 LOGO 完美置中
-col1, col2, col3 = st.columns([1, 1, 1])
-with col2:
-    # 💡 如果你上傳了檔案到 GitHub，請改成 st.image("logo.png")
-    # 💡 或是把下面的網址換成你的專屬 LOGO 連結
-    st.image("茲茲LOGO_v1（去背）.png", use_container_width=True)
+# 將本地圖片轉為網頁看得懂的 Base64 編碼
+def get_image_base64(file_path):
+    try:
+        with open(file_path, "rb") as f:
+            return base64.b64encode(f.read()).decode()
+    except Exception as e:
+        return ""
 
-# 🌟 修改 3：主畫面大標題
-st.markdown("<div class='app-title'>茲茲文教 學測戰略分析</div>", unsafe_allow_html=True)
+# 💡 請把 "logo.png" 換成你實際上傳到 GitHub 的 LOGO 檔名！
+# 如果你是用網址，請看下方註解。
+logo_base64 = get_image_base64("茲茲LOGO_v1（去背）.png") 
+
+if logo_base64:
+    st.markdown(
+        f"""
+        <style>
+            .floating-logo {{
+                position: fixed;
+                top: 14px;         /* 距離上方邊距 */
+                left: 15px;        /* 距離左側邊距 */
+                width: 55px;       /* 🌟 調整這裡可以改變 LOGO 大小！ */
+                z-index: 999999;   /* 確保它永遠蓋在最上層，不會被表格擋住 */
+                border-radius: 8px;/* 稍微加點圓角讓質感更好 */
+            }}
+        </style>
+        <img src="data:image/png;base64,{logo_base64}" class="floating-logo">
+        """,
+        unsafe_allow_html=True
+    )
+# 💡 (如果你原本 LOGO 是一串 https://... 的網址，你可以刪除上面那一整段，直接寫：)
+# st.markdown("""<style>.floating-logo { position: fixed; top: 14px; left: 15px; width: 55px; z-index: 999999; }</style><img src="你的網址" class="floating-logo">""", unsafe_allow_html=True)
+
+
+# 🌟 主畫面大標題 (稍微加一點 margin-top，避免太貼近上方)
+st.markdown("<div class='app-title' style='margin-top: 15px;'>茲茲文教 學測戰略分析</div>", unsafe_allow_html=True)
 st.markdown("<div style='text-align: center; color: gray; margin-bottom: 20px;'>AI 智能分析您的學測落點與 17 大目標學群配對。</div>", unsafe_allow_html=True)
 with st.expander("👤 點此展開修改：學生設定 (年級/類組/學校)", expanded=True):
     grade_mode = st.radio("目前階段", ["🌱 高一、高二 (探索潛力)", "🔥 高三 (模考實戰)"], horizontal=True)
