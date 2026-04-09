@@ -100,7 +100,6 @@ def get_standard_info(sub_name, score):
     return "💔 未達底", "#f1f3f4", "#5f6368", 0
 
 def clear_all_scores():
-    # 改為清除新版的獨立輸入方塊
     for key in list(st.session_state.keys()):
         if key.startswith("in_"):
             del st.session_state[key]
@@ -123,7 +122,6 @@ def get_mock_vals(target_sub, in_df_senior, is_single):
     return vals
 
 # --- 🎨 2. 頁面設定與自訂 CSS ---
-# 🌟 修改 1：瀏覽器上方的分頁標題
 st.set_page_config(page_title="茲茲文教 學測戰略分析", page_icon="🎓", layout="centered")
 
 st.markdown("""
@@ -131,11 +129,11 @@ st.markdown("""
     /* 全域字體微調 */
     html, body, [class*="css"] { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; }
     
-    /* 修正手機版標題過長斷行的問題 */
-    .app-title { text-align: center; font-weight: 800; font-size: 2.2rem; letter-spacing: -1px; margin-bottom: 0.5rem; }
+    /* 手機版標題優化 */
+    .app-title { text-align: center; font-weight: 800; font-size: 2.2rem; letter-spacing: -1px; margin-bottom: 0.5rem; margin-top: 15px;}
     @media (max-width: 480px) { .app-title { font-size: 1.8rem; } }
     
-    /* 卡片與分數排版 */
+    /* 戰力卡片 */
     .result-card { background-color: var(--background-color); border-radius: 12px; padding: 20px; text-align: left; border: 1px solid var(--secondary-background-color); margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
     .score-title { font-size: 1.2rem; font-weight: 600; color: var(--text-color); margin-bottom: 5px; }
     .score-num { font-size: 1.8rem; font-weight: 800; color: #ff4b4b; float: right; margin-top: -30px;}
@@ -145,13 +143,22 @@ st.markdown("""
     .marker { position: absolute; top: -5px; height: 26px; border-left: 2px dashed #ff9800; }
     .marker-text { position: absolute; top: -20px; font-size: 0.7rem; color: var(--text-color); opacity: 0.7; transform: translateX(-50%); white-space: nowrap;}
     
-    .badge-safe { background-color: #e6f4ea; color: #137333; padding: 6px 14px; border-radius: 20px; font-weight: bold; margin: 5px; display: inline-block; border: 1px solid #ceead6;}
-    .badge-reach { background-color: #fef7e0; color: #b06000; padding: 6px 14px; border-radius: 20px; font-weight: bold; margin: 5px; display: inline-block; border: 1px solid #feefc3;}
+    /* 🌟 新增：戰略一的微型情報卡片 (Card UI) */
+    .target-card { background-color: var(--background-color); border-radius: 8px; padding: 14px 18px; margin-bottom: 12px; border: 1px solid var(--secondary-background-color); box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+    .target-title { font-weight: 700; color: var(--text-color); font-size: 1.1rem; margin-bottom: 6px; }
+    .target-detail { font-size: 0.9rem; color: #5f6368; }
+    .pipe-divider { color: #dadce0; margin: 0 8px; font-weight: 300; }
+    .text-green { color: #137333; font-weight: 600; }
+    .text-red { color: #d93025; font-weight: 600; }
     
+    /* 🌟 新增：戰略三的歷史足跡卡片 */
+    .history-card { background-color: rgba(75, 139, 255, 0.05); border-left: 4px solid #4b8bff; padding: 14px 18px; margin-top: 10px; border-radius: 0 8px 8px 0; border-top: 1px solid #eaeaea; border-right: 1px solid #eaeaea; border-bottom: 1px solid #eaeaea;}
+    .history-year { font-weight: 700; color: var(--text-color); margin-bottom: 8px; font-size: 1rem;}
+    .history-data { font-size: 0.9rem; color: #137333; } /* 競品風格的綠色數字 */
+
     .stTabs [data-baseweb="tab-list"] { gap: 8px; }
     .stTabs [data-baseweb="tab"] { border-radius: 8px 8px 0px 0px; padding: 10px 15px; font-size: 1rem; }
     
-    /* 🌟 手機版專屬 RWD 響應式優化 */
     @media (max-width: 768px) {
         .result-card { padding: 15px; }
         .score-title { font-size: 1rem; }
@@ -164,7 +171,6 @@ st.markdown("""
 # ==========================================
 # 🌟 頁首與品牌 LOGO 區 (懸浮左上角)
 # ==========================================
-# 將本地圖片轉為網頁看得懂的 Base64 編碼
 def get_image_base64(file_path):
     try:
         with open(file_path, "rb") as f:
@@ -172,35 +178,24 @@ def get_image_base64(file_path):
     except Exception as e:
         return ""
 
-# 💡 請把 "logo.png" 換成你實際上傳到 GitHub 的 LOGO 檔名！
-# 如果你是用網址，請看下方註解。
 logo_base64 = get_image_base64("茲茲LOGO_v1（去背）.png") 
 
 if logo_base64:
     st.markdown(
         f"""
         <style>
-            .floating-logo {{
-                position: fixed;
-                top: 14px;         /* 距離上方邊距 */
-                left: 15px;        /* 距離左側邊距 */
-                width: 55px;       /* 🌟 調整這裡可以改變 LOGO 大小！ */
-                z-index: 999999;   /* 確保它永遠蓋在最上層，不會被表格擋住 */
-                border-radius: 8px;/* 稍微加點圓角讓質感更好 */
-            }}
+            .floating-logo {{ position: fixed; top: 14px; left: 15px; width: 55px; z-index: 999999; border-radius: 8px; }}
         </style>
         <img src="data:image/png;base64,{logo_base64}" class="floating-logo">
-        """,
-        unsafe_allow_html=True
-    )
-# 💡 (如果你原本 LOGO 是一串 https://... 的網址，你可以刪除上面那一整段，直接寫：)
-# st.markdown("""<style>.floating-logo { position: fixed; top: 14px; left: 15px; width: 55px; z-index: 999999; }</style><img src="你的網址" class="floating-logo">""", unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
+else:
+    # 若無本地圖檔，使用預設圖示網址做為範例
+    st.markdown("""<style>.floating-logo { position: fixed; top: 14px; left: 15px; width: 55px; z-index: 999999; border-radius: 8px; }</style><img src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png" class="floating-logo">""", unsafe_allow_html=True)
 
+st.markdown("<div class='app-title'>茲茲文教 學測戰略分析</div>", unsafe_allow_html=True)
+st.markdown("<div style='text-align: center; color: gray; margin-bottom: 20px;'>茲茲AI分析您的學測落點與 17 大目標學群配對。</div>", unsafe_allow_html=True)
 
-# 🌟 主畫面大標題 (稍微加一點 margin-top，避免太貼近上方)
-st.markdown("<div class='app-title' style='margin-top: 15px;'>茲茲文教 學測戰略分析</div>", unsafe_allow_html=True)
-st.markdown("<div style='text-align: center; color: gray; margin-bottom: 20px;'>AI 智能分析您的學測落點與 17 大目標學群配對。</div>", unsafe_allow_html=True)
-with st.expander("👤 點此展開修改：學生設定 (年級/類組/學校)", expanded=True):
+with st.expander("👤 學生基本設定 (年級/類組/學校)", expanded=True):
     grade_mode = st.radio("目前階段", ["🌱 高一、高二 (探索潛力)", "🔥 高三 (模考實戰)"], horizontal=True)
     is_senior = "高三" in grade_mode
     
@@ -218,7 +213,7 @@ target_choice = st.selectbox("🎯 設定首選目標學群 (將為您產出專�
 st.divider()
 
 # ==========================================
-# 🌟 全新原生手機輸入區 (告別 Excel 橫向滾動)
+# 🌟 全新原生手機輸入區 
 # ==========================================
 col_title, col_btn = st.columns([3, 1])
 with col_title:
@@ -226,7 +221,7 @@ with col_title:
 with col_btn:
     st.button("🧹 清空", on_click=clear_all_scores, use_container_width=True)
 
-edited_data = {} # 用來收集輸入資料重建 DataFrame
+edited_data = {} 
 
 with st.container(border=True):
     if not is_senior:
@@ -242,7 +237,6 @@ with st.container(border=True):
         max_score = 15
         st.caption("📝 提示：直接點擊下方方塊輸入 **1~15 模考級分**。未考請填 0。")
 
-    # 🌟 神級 UX 核心：動態分頁 + 雙排原生輸入方塊
     if len(idx_names) == 1:
         st.markdown(f"**{idx_names[0]}**")
         cols = st.columns(2)
@@ -262,7 +256,6 @@ with st.container(border=True):
                         row_data[sub] = st.number_input(f"{sub}", min_value=0, max_value=max_score, step=1, key=f"in_{tab_name}_{sub}")
                 edited_data[tab_name] = row_data
 
-    # 把搜集到的資料轉回模型原本吃得懂的 DataFrame 格式
     edited_df = pd.DataFrame.from_dict(edited_data, orient='index', columns=subjects_list)
 
 # ==========================================
@@ -347,6 +340,7 @@ if st.button("🚀 開始預測與全域掃描", type="primary", use_container_w
 
     if results:
         st.markdown("---")
+        # 🌟 修改：將列表改為字典結構，以便後續萃取與排版
         safe_zones, reach_zones = [], []
         
         for goal_name, reqs in target_goals.items():
@@ -368,13 +362,13 @@ if st.button("🚀 開始預測與全域掃描", type="primary", use_container_w
                     total_shortfall += 99
                     missing_details.append(f"未測驗{actual_sub}")
             
-            if is_qualified: safe_zones.append(goal_name)
-            elif total_shortfall <= 2: reach_zones.append(f"{goal_name} ({', '.join(missing_details)})") 
+            if is_qualified: 
+                safe_zones.append({"name": goal_name})
+            elif total_shortfall <= 2: 
+                reach_zones.append({"name": goal_name, "missing": missing_details})
 
-        # 🌟 修改 1：把「各科戰力」排在第一個
         tab1, tab2, tab3 = st.tabs(["📊 各科戰力", "🎯 診斷與學群", "📋 分享"])
         
-        # 🌟 修改 2：將各科戰力卡片的內容放入 tab1
         with tab1:
             st.subheader("📊 預估戰力詳情")
             for i, (sub, d) in enumerate(results.items()):
@@ -390,8 +384,32 @@ if st.button("🚀 開始預測與全域掃描", type="primary", use_container_w
                     f'<div class="progress-bg"><div class="progress-fill" style="width: {pct}%;"></div><div class="marker" style="left: {avg_pct}%;"></div><div class="marker-text" style="left: {avg_pct}%;">均標</div><div class="marker" style="left: {front_pct}%; border-left: 2px dashed #4caf50;"></div><div class="marker-text" style="left: {front_pct}%;">前標</div></div></div>'
                 )
                 st.markdown(card_html, unsafe_allow_html=True)
+            
+            # 🌟 新增：戰略三 (歷年足跡參考區塊)
+            st.markdown("<br>", unsafe_allow_html=True)
+            with st.expander("📚 歷年全國頂/前標足跡參考 (113-114年)", expanded=False):
+                st.markdown("""
+                <div class='history-card'>
+                    <div class='history-year'>114 年學測 (參考大盤)</div>
+                    <div class='history-data'>
+                        國文 頂 <span class='text-green'>13</span> <span class='pipe-divider'>|</span> 
+                        英文 頂 <span class='text-green'>13</span> <span class='pipe-divider'>|</span> 
+                        數A 頂 <span class='text-green'>12</span> <span class='pipe-divider'>|</span> 
+                        自然 頂 <span class='text-green'>13</span>
+                    </div>
+                </div>
+                <div class='history-card' style='border-left-color: #9aa0a6;'>
+                    <div class='history-year'>113 年學測 (參考大盤)</div>
+                    <div class='history-data' style='color: #5f6368;'>
+                        國文 頂 13 <span class='pipe-divider'>|</span> 
+                        英文 頂 13 <span class='pipe-divider'>|</span> 
+                        數A 頂 12 <span class='pipe-divider'>|</span> 
+                        自然 頂 13
+                    </div>
+                </div>
+                <div style='margin-top: 10px; font-size: 0.8rem; color: gray;'>註：系統預測值已自動對齊歷年難易度常模。</div>
+                """, unsafe_allow_html=True)
 
-        # 🌟 修改 3：將專屬診斷與學群雷達移到 tab2
         with tab2:
             st.subheader(f"🎯 專屬診斷：【{target_choice}】")
             with st.container(border=True):
@@ -419,22 +437,38 @@ if st.button("🚀 開始預測與全域掃描", type="primary", use_container_w
 
             st.markdown("<br>", unsafe_allow_html=True)
             st.subheader("💡 全域學群配對雷達")
-            with st.container(border=True):
-                if safe_zones:
-                    st.markdown("**✅ 穩健錄取區：**")
-                    st.markdown("".join([f"<div class='badge-safe'>{zone}</div>" for zone in safe_zones]), unsafe_allow_html=True)
-                else:
-                    st.warning("目前分數尚無穩健錄取學群，請參考下方衝刺區！")
-                st.markdown("<br>", unsafe_allow_html=True)
-                if reach_zones:
-                    st.markdown("**🔥 衝刺挑戰區：**")
-                    st.markdown("".join([f"<div class='badge-reach'>{zone.split(' (')[0]} <span style='font-size:0.8rem; font-weight:normal;'>({zone.split(' (')[1]}</span></div>" for zone in reach_zones]), unsafe_allow_html=True)
+            
+            # 🌟 修改：套用戰略一的洗鍊卡片介面
+            if safe_zones:
+                st.markdown("**✅ 穩健錄取區：**")
+                for z in safe_zones:
+                    st.markdown(f"""
+                    <div class="target-card" style="border-left: 4px solid #137333;">
+                        <div class="target-title">{z['name']}</div>
+                        <div class="target-detail">狀態： <span class="text-green">穩健達標</span></div>
+                    </div>
+                    """, unsafe_allow_html=True)
+            else:
+                st.info("目前分數尚無穩健錄取學群，請參考下方衝刺區！")
+                
+            st.markdown("<br>", unsafe_allow_html=True)
+            
+            if reach_zones:
+                st.markdown("**🔥 衝刺挑戰區：**")
+                for z in reach_zones:
+                    # 將短板文字轉換成優雅的 pipe 隔開格式
+                    missing_str = " <span class='pipe-divider'>|</span> ".join([f"<span class='text-red'>{m}</span>" for m in z['missing']])
+                    st.markdown(f"""
+                    <div class="target-card" style="border-left: 4px solid #ea4335;">
+                        <div class="target-title">{z['name']}</div>
+                        <div class="target-detail">待補短板： {missing_str}</div>
+                    </div>
+                    """, unsafe_allow_html=True)
 
         with tab3:
             st.subheader("📋 匯出戰略報告")
             st.caption("點擊代碼框右上角的「複製圖示」，即可傳送給老師或家長。")
             
-            # 🌟 修改 4：報告匯出的文字品牌化
             report_text = f"🎯 【茲茲文教 學測戰略分析報告】\n"
             report_text += f"🎓 階段：{grade_mode.split(' ')[1]} | 📚 類組：{group}\n"
             if not is_senior: report_text += f"🏫 學校：{school}\n"
@@ -446,8 +480,8 @@ if st.button("🚀 開始預測與全域掃描", type="primary", use_container_w
                 report_text += f"- {sub}：{d['center']} 級分 ({label})\n"
                 
             report_text += f"\n💡 AI 智能配對：\n"
-            report_text += f"✅ 穩健錄取區：\n" + ("無\n" if not safe_zones else "\n".join([f"- {z}" for z in safe_zones]) + "\n")
-            report_text += f"\n🔥 衝刺挑戰區：\n" + ("無\n" if not reach_zones else "\n".join([f"- {z}" for z in reach_zones]))
+            report_text += f"✅ 穩健錄取區：\n" + ("無\n" if not safe_zones else "\n".join([f"- {z['name']}" for z in safe_zones]) + "\n")
+            report_text += f"\n🔥 衝刺挑戰區：\n" + ("無\n" if not reach_zones else "\n".join([f"- {z['name']} (缺: {', '.join(z['missing'])})" for z in reach_zones]))
             report_text += f"\n\n-- 由 茲茲文教 AI 戰略系統 自動生成 --"
             
             st.code(report_text, language="markdown")
