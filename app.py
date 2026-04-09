@@ -120,86 +120,99 @@ def get_mock_vals(target_sub, in_df_senior, is_single):
         if in_df_senior.get(f'模考2_{sub}', 0) > 0: vals.append(in_df_senior[f'模考2_{sub}'])
     return vals
 
-# --- 🎨 2. 頁面設定與自訂 CSS ---
-st.set_page_config(page_title="2026 學測戰略預測系統", page_icon="🎯", layout="wide")
+# --- 🎨 2. 頁面設定與自訂 CSS (加入 RWD 手機版優化) ---
+st.set_page_config(page_title="2026 學測戰略預測", page_icon="🎯", layout="centered")
 
 st.markdown("""
 <style>
+    /* 全域字體微調 */
+    html, body, [class*="css"] { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; }
+    
+    /* 卡片與分數排版 */
     .result-card { background-color: var(--background-color); border-radius: 12px; padding: 20px; text-align: left; border: 1px solid var(--secondary-background-color); margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
     .score-title { font-size: 1.2rem; font-weight: 600; color: var(--text-color); margin-bottom: 5px; }
     .score-num { font-size: 1.8rem; font-weight: 800; color: #ff4b4b; float: right; margin-top: -30px;}
+    
     .progress-bg { width: 100%; background-color: var(--secondary-background-color); border-radius: 8px; height: 16px; position: relative; margin-top: 25px; margin-bottom: 5px;}
     .progress-fill { background-color: #4b8bff; height: 100%; border-radius: 8px; transition: width 0.5s ease-in-out;}
     .marker { position: absolute; top: -5px; height: 26px; border-left: 2px dashed #ff9800; }
     .marker-text { position: absolute; top: -20px; font-size: 0.7rem; color: var(--text-color); opacity: 0.7; transform: translateX(-50%); white-space: nowrap;}
+    
     .badge-safe { background-color: #e6f4ea; color: #137333; padding: 6px 14px; border-radius: 20px; font-weight: bold; margin: 5px; display: inline-block; border: 1px solid #ceead6;}
     .badge-reach { background-color: #fef7e0; color: #b06000; padding: 6px 14px; border-radius: 20px; font-weight: bold; margin: 5px; display: inline-block; border: 1px solid #feefc3;}
+    
     .stTabs [data-baseweb="tab-list"] { gap: 8px; }
-    .stTabs [data-baseweb="tab"] { border-radius: 8px 8px 0px 0px; padding: 10px 20px; font-size: 1.1rem; }
+    .stTabs [data-baseweb="tab"] { border-radius: 8px 8px 0px 0px; padding: 10px 15px; font-size: 1rem; }
+    
+    /* 🌟 手機版專屬 RWD 響應式優化 */
+    @media (max-width: 768px) {
+        .result-card { padding: 15px; }
+        .score-title { font-size: 1rem; }
+        .score-num { font-size: 1.6rem; float: none; display: block; margin-top: 5px; color: #ff4b4b; } /* 取消右浮動，改為垂直排列防疊字 */
+        .stButton>button { padding: 15px !important; font-size: 1.1rem !important; font-weight: bold;} /* 按鈕加高，方便大拇指點擊 */
+    }
 </style>
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 側邊欄 (Sidebar)
+# 🌟 移除側邊欄，改為「由上而下瀑布流」UI
 # ==========================================
-with st.sidebar:
-    st.image("https://cdn-icons-png.flaticon.com/512/3135/3135715.png", width=60)
-    st.title("戰略參數設定")
-    st.caption("調整學生的基本背景與目標")
-    
-    st.markdown("### 👤 學生檔案")
-    grade_mode = st.radio("目前階段", ["🌱 高一、高二 (潛力)", "🔥 高三 (模考實戰)"], help="高一二將啟用機器學習常模引擎；高三則啟用純實戰校準引擎。")
+st.title("🎯 2026 學測戰略預測系統")
+st.caption("AI 智能分析您的學測落點與 17 大目標學群配對。")
+
+# 區塊 1：基本設定 (使用展開器，節省手機螢幕空間)
+with st.expander("👤 點此展開修改：學生設定 (年級/類組/學校)", expanded=False):
+    grade_mode = st.radio("目前階段", ["🌱 高一、高二 (探索潛力)", "🔥 高三 (模考實戰)"], horizontal=True)
     is_senior = "高三" in grade_mode
     
-    group = st.selectbox("所屬類組", ["理組", "文組"], help="理組將對齊校系的數A門檻；文組則自動對齊數B門檻。")
-    
-    if not is_senior:
-        school = st.selectbox("就讀學校", list(score_map.keys()), help="高中校名底蘊會影響高一二的潛力預估爆發力。")
-    else:
-        st.info("💡 高三已啟用純實戰校準，為求公平不計校名。")
-        school = "高三無須填寫"
-        
-    st.markdown("### 🎯 終極夢想")
-    target_choice = st.selectbox("設定首選目標學群", list(target_goals.keys()), help="系統將針對此首選目標，為您產出專屬的教練診斷評語。")
+    col1, col2 = st.columns(2)
+    with col1: group = st.selectbox("所屬類組", ["理組", "文組"])
+    with col2:
+        if not is_senior:
+            school = st.selectbox("就讀學校", list(score_map.keys()))
+        else:
+            st.info("💡 高三採實戰校準，不計校名。")
+            school = "高三無須填寫"
 
-# ==========================================
-# 主畫面：資料輸入區
-# ==========================================
-st.title("🎯 2026 學測落點 AI 戰略分析")
-st.caption("結合大數據常模與機器學習，精準預測學測落點，並自動比對全台 17 大目標學群。")
+# 區塊 2：終極夢想設定 (拉到主畫面，超醒目)
+target_choice = st.selectbox("🎯 設定首選目標學群 (將為您產出專屬診斷)", list(target_goals.keys()))
 
-col_title, col_btn = st.columns([5, 1])
+st.divider()
+
+# 區塊 3：成績輸入區
+col_title, col_btn = st.columns([3, 1])
 with col_title:
-    st.markdown("#### 📊 學習成績輸入區")
+    st.markdown("#### 📊 成績輸入區")
 with col_btn:
-    st.button("🧹 清空表格", on_click=clear_all_scores, use_container_width=True)
+    st.button("🧹 清空", on_click=clear_all_scores, use_container_width=True)
 
 with st.container(border=True):
     if not is_senior:
         subjects_list = ['國文', '英文', '數學', '物理', '化學', '生物', '地科', '歷史', '地理', '公民']
-        input_type = st.radio("填寫模式", ["🎯 單次平均 (0~100分)", "📈 四學期成績 (0~100分)"], horizontal=True)
+        input_type = st.radio("填寫模式", ["🎯 單次平均 (快速)", "📈 四學期成績 (精準)"], horizontal=True)
         idx_names = ["單次平均"] if "單次" in input_type else ["高一上", "高一下", "高二上", "高二下"]
         max_score = 100
-        st.caption("📝 點擊表格輸入 **原始分數**。未考科目請填 0。")
+        st.caption("📝 提示：點擊表格輸入 **0~100 原始分數**。未考請填 0。")
     else:
         subjects_list = ['國文', '英文', '數A', '數B', '自然', '社會']
-        input_type = st.radio("填寫模式", ["🥇 僅考過第一次模考 (1~15級分)", "🥈 已考過第一與第二次模考 (1~15級分)"], horizontal=True)
-        idx_names = ["第一次模考"] if "僅考過" in input_type else ["第一次模考", "第二次模考"]
+        input_type = st.radio("填寫模式", ["🥇 僅第一次模考", "🥈 第一與第二次模考"], horizontal=True)
+        idx_names = ["第一次模考"] if "僅第一" in input_type else ["第一次模考", "第二次模考"]
         max_score = 15
-        st.caption("📝 點擊表格輸入 **模考級分**。未考科目請填 0。")
+        st.caption("📝 提示：點擊表格輸入 **1~15 模考級分**。未考請填 0。")
     
     df_init = pd.DataFrame(0, index=idx_names, columns=subjects_list)
     editor_key = f"editor_{is_senior}_{len(idx_names)}"
     config = {col: st.column_config.NumberColumn(min_value=0, max_value=max_score, step=1) for col in subjects_list}
+    # 在手機上，資料網格容易超過螢幕，確保它自動適應容器寬度
     edited_df = st.data_editor(df_init, key=editor_key, use_container_width=True, column_config=config)
 
 # ==========================================
-# 執行預測邏輯
+# 執行預測邏輯 (下方代碼完全一致)
 # ==========================================
-if st.button("🚀 產出全域落點與戰略分析報告", type="primary", use_container_width=True):
+st.markdown("<br>", unsafe_allow_html=True)
+if st.button("🚀 開始預測與全域掃描", type="primary", use_container_width=True):
     results = {}
     
-    # 防呆：成績不能全 0
     if edited_df.sum().sum() == 0:
         st.error("⚠️ 偵測到成績為全 0，請至少填寫一個科目的成績再進行預測！")
         st.stop()
@@ -209,7 +222,7 @@ if st.button("🚀 產出全域落點與戰略分析報告", type="primary", use
         time.sleep(0.3)
         
         if is_senior:
-            is_single = "僅考過" in input_type
+            is_single = "僅" in input_type
             engine_name = '高三單次' if is_single else '高三兩次'
             st.write(f"🧠 啟動【{engine_name}】專屬 AI 模型與防低估演算法...")
             
@@ -274,9 +287,6 @@ if st.button("🚀 產出全域落點與戰略分析報告", type="primary", use
         status.update(label="✨ 戰略診斷報告生成完畢！", state="complete", expanded=False)
 
     if results:
-        # ==========================================
-        # 報告輸出渲染
-        # ==========================================
         st.markdown("---")
         safe_zones, reach_zones = [], []
         
@@ -302,10 +312,10 @@ if st.button("🚀 產出全域落點與戰略分析報告", type="primary", use
             if is_qualified: safe_zones.append(goal_name)
             elif total_shortfall <= 2: reach_zones.append(f"{goal_name} ({', '.join(missing_details)})") 
 
-        tab1, tab2, tab3 = st.tabs(["🎯 戰略總覽與學群", "📊 各科戰力卡片", "📋 匯出與分享"])
+        tab1, tab2, tab3 = st.tabs(["🎯 診斷與學群", "📊 各科戰力", "📋 分享"])
         
         with tab1:
-            st.subheader(f"🎯 專屬夢想診斷：【{target_choice}】")
+            st.subheader(f"🎯 專屬診斷：【{target_choice}】")
             with st.container(border=True):
                 reqs = target_goals[target_choice]
                 missing_for_dream = []
@@ -323,29 +333,28 @@ if st.button("🚀 產出全域落點與戰略分析報告", type="primary", use
                         missing_for_dream.append(f"未輸入 **{actual_sub}** 影響評估")
                         
                 if is_dream_safe:
-                    st.success(f"🎉 **戰略綠燈**：太棒了！你目前的預估戰力已經穩穩達標【{target_choice}】！請繼續保持現有的讀書節奏！")
+                    st.success(f"🎉 **戰略綠燈**：目前預估戰力已穩穩達標【{target_choice}】！")
                     st.balloons() 
                 else:
-                    st.error(f"🚀 **戰略衝刺**：距離夢想【{target_choice}】還差一點點火侯！")
-                    st.markdown(f"💡 **教練建議**：接下來的複習計畫，請務必將火力集中在救援短板： {', '.join(missing_for_dream)}。")
+                    st.error(f"🚀 **戰略衝刺**：距離【{target_choice}】還差一點點火侯！")
+                    st.markdown(f"💡 **教練建議**：請務必將火力集中在救援短板： {', '.join(missing_for_dream)}。")
 
             st.markdown("<br>", unsafe_allow_html=True)
-            st.subheader("💡 AI 全域學群配對雷達")
+            st.subheader("💡 全域學群配對雷達")
             with st.container(border=True):
                 if safe_zones:
-                    st.markdown("**✅ 穩健錄取區 (已達門檻)：**")
+                    st.markdown("**✅ 穩健錄取區：**")
                     st.markdown("".join([f"<div class='badge-safe'>{zone}</div>" for zone in safe_zones]), unsafe_allow_html=True)
                 else:
-                    st.warning("目前預測分數尚無穩健錄取的頂段學群，請參考下方的衝刺區！")
+                    st.warning("目前分數尚無穩健錄取學群，請參考下方衝刺區！")
                 st.markdown("<br>", unsafe_allow_html=True)
                 if reach_zones:
-                    st.markdown("**🔥 衝刺挑戰區 (只差 1~2 級分)：**")
+                    st.markdown("**🔥 衝刺挑戰區：**")
                     st.markdown("".join([f"<div class='badge-reach'>{zone.split(' (')[0]} <span style='font-size:0.8rem; font-weight:normal;'>({zone.split(' (')[1]}</span></div>" for zone in reach_zones]), unsafe_allow_html=True)
 
         with tab2:
-            st.subheader("📊 各科預估戰力詳情")
-            col_res1, col_res2, col_res3 = st.columns(3) 
-            
+            st.subheader("📊 預估戰力詳情")
+            # 在手機版，我們不再強迫它分 3 欄，讓 Streamlit 自動將元件往下排
             for i, (sub, d) in enumerate(results.items()):
                 label, bg_color, text_color, _ = get_standard_info(sub, d['center'])
                 std_dict = gsat_standards[sub]
@@ -358,12 +367,11 @@ if st.button("🚀 產出全域落點與戰略分析報告", type="primary", use
                     f'<div style="display:inline-block; background-color:{bg_color}; color:{text_color}; padding:2px 8px; border-radius:10px; font-size:0.75rem; font-weight:bold; margin-bottom:15px;">{label}</div>'
                     f'<div class="progress-bg"><div class="progress-fill" style="width: {pct}%;"></div><div class="marker" style="left: {avg_pct}%;"></div><div class="marker-text" style="left: {avg_pct}%;">均標</div><div class="marker" style="left: {front_pct}%; border-left: 2px dashed #4caf50;"></div><div class="marker-text" style="left: {front_pct}%;">前標</div></div></div>'
                 )
-                with [col_res1, col_res2, col_res3][i % 3]:
-                    st.markdown(card_html, unsafe_allow_html=True)
+                st.markdown(card_html, unsafe_allow_html=True)
 
         with tab3:
             st.subheader("📋 匯出戰略報告")
-            st.caption("點擊下方代碼框右上角的「複製圖示」，即可將完整報告傳送給老師或家長。")
+            st.caption("點擊代碼框右上角的「複製圖示」，即可傳送給老師或家長。")
             
             report_text = f"🎯 【2026 學測 AI 戰略預測報告】\n"
             report_text += f"🎓 階段：{grade_mode.split(' ')[1]} | 📚 類組：{group}\n"
