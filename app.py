@@ -122,7 +122,8 @@ def get_mock_vals(target_sub, in_df_senior, is_single):
     return vals
 
 # --- 🎨 2. 頁面設定與自訂 CSS ---
-st.set_page_config(page_title="2026 學測戰略預測", page_icon="🎯", layout="centered")
+# 🌟 修改 1：瀏覽器上方的分頁標題
+st.set_page_config(page_title="茲茲文教 學測戰略分析", page_icon="🎓", layout="centered")
 
 st.markdown("""
 <style>
@@ -160,12 +161,19 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 🌟 頁首與設定區
+# 🌟 頁首與品牌 LOGO 區
 # ==========================================
-st.markdown("<div class='app-title'>🎯 2026 學測戰略預測</div>", unsafe_allow_html=True)
-st.markdown("<div style='text-align: center; color: gray; margin-bottom: 20px;'>AI 智能分析您的學測落點與 17 大目標學群配對。</div>", unsafe_allow_html=True)
+# 🌟 修改 2：利用欄位排版，讓 LOGO 完美置中
+col1, col2, col3 = st.columns([1, 1, 1])
+with col2:
+    # 💡 如果你上傳了檔案到 GitHub，請改成 st.image("logo.png")
+    # 💡 或是把下面的網址換成你的專屬 LOGO 連結
+    st.image("茲茲LOGO_v1（去背）.png", use_container_width=True)
 
-with st.expander("👤 點此展開修改：學生設定 (年級/類組/學校)", expanded=False):
+# 🌟 修改 3：主畫面大標題
+st.markdown("<div class='app-title'>茲茲文教 學測戰略分析</div>", unsafe_allow_html=True)
+st.markdown("<div style='text-align: center; color: gray; margin-bottom: 20px;'>AI 智能分析您的學測落點與 17 大目標學群配對。</div>", unsafe_allow_html=True)
+with st.expander("👤 點此展開修改：學生設定 (年級/類組/學校)", expanded=True):
     grade_mode = st.radio("目前階段", ["🌱 高一、高二 (探索潛力)", "🔥 高三 (模考實戰)"], horizontal=True)
     is_senior = "高三" in grade_mode
     
@@ -336,9 +344,28 @@ if st.button("🚀 開始預測與全域掃描", type="primary", use_container_w
             if is_qualified: safe_zones.append(goal_name)
             elif total_shortfall <= 2: reach_zones.append(f"{goal_name} ({', '.join(missing_details)})") 
 
-        tab1, tab2, tab3 = st.tabs(["🎯 診斷與學群", "📊 各科戰力", "📋 分享"])
+        # 🌟 修改 1：把「各科戰力」排在第一個
+        tab1, tab2, tab3 = st.tabs(["📊 各科戰力", "🎯 診斷與學群", "📋 分享"])
         
+        # 🌟 修改 2：將各科戰力卡片的內容放入 tab1
         with tab1:
+            st.subheader("📊 預估戰力詳情")
+            for i, (sub, d) in enumerate(results.items()):
+                label, bg_color, text_color, _ = get_standard_info(sub, d['center'])
+                std_dict = gsat_standards[sub]
+                pct, front_pct, avg_pct = (d['center'] / 15.0) * 100, (std_dict['前標'] / 15.0) * 100, (std_dict['均標'] / 15.0) * 100
+                
+                card_html = (
+                    f'<div class="result-card">'
+                    f'<div class="score-title">{sub} <span style="font-size:0.8rem; font-weight:normal; opacity:0.6;">區間: {d["low"]}~{d["high"]}</span></div>'
+                    f'<div class="score-num">{d["center"]}</div>'
+                    f'<div style="display:inline-block; background-color:{bg_color}; color:{text_color}; padding:2px 8px; border-radius:10px; font-size:0.75rem; font-weight:bold; margin-bottom:15px;">{label}</div>'
+                    f'<div class="progress-bg"><div class="progress-fill" style="width: {pct}%;"></div><div class="marker" style="left: {avg_pct}%;"></div><div class="marker-text" style="left: {avg_pct}%;">均標</div><div class="marker" style="left: {front_pct}%; border-left: 2px dashed #4caf50;"></div><div class="marker-text" style="left: {front_pct}%;">前標</div></div></div>'
+                )
+                st.markdown(card_html, unsafe_allow_html=True)
+
+        # 🌟 修改 3：將專屬診斷與學群雷達移到 tab2
+        with tab2:
             st.subheader(f"🎯 專屬診斷：【{target_choice}】")
             with st.container(border=True):
                 reqs = target_goals[target_choice]
@@ -376,27 +403,12 @@ if st.button("🚀 開始預測與全域掃描", type="primary", use_container_w
                     st.markdown("**🔥 衝刺挑戰區：**")
                     st.markdown("".join([f"<div class='badge-reach'>{zone.split(' (')[0]} <span style='font-size:0.8rem; font-weight:normal;'>({zone.split(' (')[1]}</span></div>" for zone in reach_zones]), unsafe_allow_html=True)
 
-        with tab2:
-            st.subheader("📊 預估戰力詳情")
-            for i, (sub, d) in enumerate(results.items()):
-                label, bg_color, text_color, _ = get_standard_info(sub, d['center'])
-                std_dict = gsat_standards[sub]
-                pct, front_pct, avg_pct = (d['center'] / 15.0) * 100, (std_dict['前標'] / 15.0) * 100, (std_dict['均標'] / 15.0) * 100
-                
-                card_html = (
-                    f'<div class="result-card">'
-                    f'<div class="score-title">{sub} <span style="font-size:0.8rem; font-weight:normal; opacity:0.6;">區間: {d["low"]}~{d["high"]}</span></div>'
-                    f'<div class="score-num">{d["center"]}</div>'
-                    f'<div style="display:inline-block; background-color:{bg_color}; color:{text_color}; padding:2px 8px; border-radius:10px; font-size:0.75rem; font-weight:bold; margin-bottom:15px;">{label}</div>'
-                    f'<div class="progress-bg"><div class="progress-fill" style="width: {pct}%;"></div><div class="marker" style="left: {avg_pct}%;"></div><div class="marker-text" style="left: {avg_pct}%;">均標</div><div class="marker" style="left: {front_pct}%; border-left: 2px dashed #4caf50;"></div><div class="marker-text" style="left: {front_pct}%;">前標</div></div></div>'
-                )
-                st.markdown(card_html, unsafe_allow_html=True)
-
         with tab3:
             st.subheader("📋 匯出戰略報告")
             st.caption("點擊代碼框右上角的「複製圖示」，即可傳送給老師或家長。")
             
-            report_text = f"🎯 【2026 學測 AI 戰略預測報告】\n"
+            # 🌟 修改 4：報告匯出的文字品牌化
+            report_text = f"🎯 【茲茲文教 學測戰略分析報告】\n"
             report_text += f"🎓 階段：{grade_mode.split(' ')[1]} | 📚 類組：{group}\n"
             if not is_senior: report_text += f"🏫 學校：{school}\n"
             report_text += f"\n🎯 專屬目標診斷：【{target_choice}】\n"
@@ -409,6 +421,6 @@ if st.button("🚀 開始預測與全域掃描", type="primary", use_container_w
             report_text += f"\n💡 AI 智能配對：\n"
             report_text += f"✅ 穩健錄取區：\n" + ("無\n" if not safe_zones else "\n".join([f"- {z}" for z in safe_zones]) + "\n")
             report_text += f"\n🔥 衝刺挑戰區：\n" + ("無\n" if not reach_zones else "\n".join([f"- {z}" for z in reach_zones]))
-            report_text += f"\n\n-- 由 2026 學測 AI 戰略系統自動生成 --"
+            report_text += f"\n\n-- 由 茲茲文教 AI 戰略系統 自動生成 --"
             
             st.code(report_text, language="markdown")
