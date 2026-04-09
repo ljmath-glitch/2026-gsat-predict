@@ -99,8 +99,9 @@ def get_standard_info(sub_name, score):
     return "💔 未達底", "#f1f3f4", "#5f6368", 0
 
 def clear_all_scores():
+    # 改為清除新版的獨立輸入方塊
     for key in list(st.session_state.keys()):
-        if key.startswith("editor_"):
+        if key.startswith("in_"):
             del st.session_state[key]
 
 def get_val(df, row_name, col_name):
@@ -120,13 +121,17 @@ def get_mock_vals(target_sub, in_df_senior, is_single):
         if in_df_senior.get(f'模考2_{sub}', 0) > 0: vals.append(in_df_senior[f'模考2_{sub}'])
     return vals
 
-# --- 🎨 2. 頁面設定與自訂 CSS (加入 RWD 手機版優化) ---
+# --- 🎨 2. 頁面設定與自訂 CSS ---
 st.set_page_config(page_title="2026 學測戰略預測", page_icon="🎯", layout="centered")
 
 st.markdown("""
 <style>
     /* 全域字體微調 */
     html, body, [class*="css"] { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; }
+    
+    /* 修正手機版標題過長斷行的問題 */
+    .app-title { text-align: center; font-weight: 800; font-size: 2.2rem; letter-spacing: -1px; margin-bottom: 0.5rem; }
+    @media (max-width: 480px) { .app-title { font-size: 1.8rem; } }
     
     /* 卡片與分數排版 */
     .result-card { background-color: var(--background-color); border-radius: 12px; padding: 20px; text-align: left; border: 1px solid var(--secondary-background-color); margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
@@ -148,19 +153,18 @@ st.markdown("""
     @media (max-width: 768px) {
         .result-card { padding: 15px; }
         .score-title { font-size: 1rem; }
-        .score-num { font-size: 1.6rem; float: none; display: block; margin-top: 5px; color: #ff4b4b; } /* 取消右浮動，改為垂直排列防疊字 */
-        .stButton>button { padding: 15px !important; font-size: 1.1rem !important; font-weight: bold;} /* 按鈕加高，方便大拇指點擊 */
+        .score-num { font-size: 1.6rem; float: none; display: block; margin-top: 5px; color: #ff4b4b; }
+        .stButton>button { padding: 15px !important; font-size: 1.1rem !important; font-weight: bold;} 
     }
 </style>
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 🌟 移除側邊欄，改為「由上而下瀑布流」UI
+# 🌟 頁首與設定區
 # ==========================================
-st.title("🎯 2026 學測戰略預測系統")
-st.caption("AI 智能分析您的學測落點與 17 大目標學群配對。")
+st.markdown("<div class='app-title'>🎯 2026 學測戰略預測</div>", unsafe_allow_html=True)
+st.markdown("<div style='text-align: center; color: gray; margin-bottom: 20px;'>AI 智能分析您的學測落點與 17 大目標學群配對。</div>", unsafe_allow_html=True)
 
-# 區塊 1：基本設定 (使用展開器，節省手機螢幕空間)
 with st.expander("👤 點此展開修改：學生設定 (年級/類組/學校)", expanded=False):
     grade_mode = st.radio("目前階段", ["🌱 高一、高二 (探索潛力)", "🔥 高三 (模考實戰)"], horizontal=True)
     is_senior = "高三" in grade_mode
@@ -174,17 +178,20 @@ with st.expander("👤 點此展開修改：學生設定 (年級/類組/學校)"
             st.info("💡 高三採實戰校準，不計校名。")
             school = "高三無須填寫"
 
-# 區塊 2：終極夢想設定 (拉到主畫面，超醒目)
 target_choice = st.selectbox("🎯 設定首選目標學群 (將為您產出專屬診斷)", list(target_goals.keys()))
 
 st.divider()
 
-# 區塊 3：成績輸入區
+# ==========================================
+# 🌟 全新原生手機輸入區 (告別 Excel 橫向滾動)
+# ==========================================
 col_title, col_btn = st.columns([3, 1])
 with col_title:
     st.markdown("#### 📊 成績輸入區")
 with col_btn:
     st.button("🧹 清空", on_click=clear_all_scores, use_container_width=True)
+
+edited_data = {} # 用來收集輸入資料重建 DataFrame
 
 with st.container(border=True):
     if not is_senior:
@@ -192,22 +199,39 @@ with st.container(border=True):
         input_type = st.radio("填寫模式", ["🎯 單次平均 (快速)", "📈 四學期成績 (精準)"], horizontal=True)
         idx_names = ["單次平均"] if "單次" in input_type else ["高一上", "高一下", "高二上", "高二下"]
         max_score = 100
-        st.caption("📝 提示：點擊表格輸入 **0~100 原始分數**。未考請填 0。")
+        st.caption("📝 提示：直接點擊下方方塊輸入 **0~100 原始分數**。未考請填 0。")
     else:
         subjects_list = ['國文', '英文', '數A', '數B', '自然', '社會']
         input_type = st.radio("填寫模式", ["🥇 僅第一次模考", "🥈 第一與第二次模考"], horizontal=True)
         idx_names = ["第一次模考"] if "僅第一" in input_type else ["第一次模考", "第二次模考"]
         max_score = 15
-        st.caption("📝 提示：點擊表格輸入 **1~15 模考級分**。未考請填 0。")
-    
-    df_init = pd.DataFrame(0, index=idx_names, columns=subjects_list)
-    editor_key = f"editor_{is_senior}_{len(idx_names)}"
-    config = {col: st.column_config.NumberColumn(min_value=0, max_value=max_score, step=1) for col in subjects_list}
-    # 在手機上，資料網格容易超過螢幕，確保它自動適應容器寬度
-    edited_df = st.data_editor(df_init, key=editor_key, use_container_width=True, column_config=config)
+        st.caption("📝 提示：直接點擊下方方塊輸入 **1~15 模考級分**。未考請填 0。")
+
+    # 🌟 神級 UX 核心：動態分頁 + 雙排原生輸入方塊
+    if len(idx_names) == 1:
+        st.markdown(f"**{idx_names[0]}**")
+        cols = st.columns(2)
+        row_data = {}
+        for j, sub in enumerate(subjects_list):
+            with cols[j % 2]:
+                row_data[sub] = st.number_input(f"{sub}", min_value=0, max_value=max_score, step=1, key=f"in_{idx_names[0]}_{sub}")
+        edited_data[idx_names[0]] = row_data
+    else:
+        tabs_input = st.tabs(idx_names)
+        for i, tab_name in enumerate(idx_names):
+            with tabs_input[i]:
+                cols = st.columns(2)
+                row_data = {}
+                for j, sub in enumerate(subjects_list):
+                    with cols[j % 2]:
+                        row_data[sub] = st.number_input(f"{sub}", min_value=0, max_value=max_score, step=1, key=f"in_{tab_name}_{sub}")
+                edited_data[tab_name] = row_data
+
+    # 把搜集到的資料轉回模型原本吃得懂的 DataFrame 格式
+    edited_df = pd.DataFrame.from_dict(edited_data, orient='index', columns=subjects_list)
 
 # ==========================================
-# 執行預測邏輯 (下方代碼完全一致)
+# 執行預測邏輯
 # ==========================================
 st.markdown("<br>", unsafe_allow_html=True)
 if st.button("🚀 開始預測與全域掃描", type="primary", use_container_width=True):
@@ -354,7 +378,6 @@ if st.button("🚀 開始預測與全域掃描", type="primary", use_container_w
 
         with tab2:
             st.subheader("📊 預估戰力詳情")
-            # 在手機版，我們不再強迫它分 3 欄，讓 Streamlit 自動將元件往下排
             for i, (sub, d) in enumerate(results.items()):
                 label, bg_color, text_color, _ = get_standard_info(sub, d['center'])
                 std_dict = gsat_standards[sub]
